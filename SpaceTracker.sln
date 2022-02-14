@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpaceTracker", "SpaceTracker\SpaceTracker.csproj", "{BB69BA08-FC9D-4320-B6B1-4F992415820D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BB69BA08-FC9D-4320-B6B1-4F992415820D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB69BA08-FC9D-4320-B6B1-4F992415820D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB69BA08-FC9D-4320-B6B1-4F992415820D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB69BA08-FC9D-4320-B6B1-4F992415820D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8C6E422A-EBCE-41CB-B605-74C7904DB4B3}
+	EndGlobalSection
+EndGlobal

@@ -4,3 +4,5 @@
 
 /SpaceTracker/obj/Debug
 /.vs/SpaceTracker
+/packages/Autodesk.Revit.SDK.2022.0.2.392
+/SpaceTracker/bin/Debug

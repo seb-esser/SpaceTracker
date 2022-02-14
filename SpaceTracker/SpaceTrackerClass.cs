@@ -24,6 +24,7 @@ namespace SpaceTracker
         /// <returns></returns>
         public Result OnStartup(UIControlledApplication application)
         {
+            Debug.WriteLine("[SpaceTracker] Mounting... ");
             try
             {
                 application.ControlledApplication.DocumentCreated +=
@@ -83,6 +84,9 @@ namespace SpaceTracker
         {
             // get document from event args.
             Document doc = e.Document;
+
+            var extractor = new SpaceExtractor();
+            extractor.CreateInitialGraph(doc);
 
             // get all spaces and build graph from existing model
         }

@@ -3,10 +3,10 @@
 	<AddIn Type="Application">
 		<Name>SpaceTracker</Name>
 		<Assembly>SpaceTracker.dll</Assembly>
-		<AddInId>2ac03494-3979-46f4-b91d-141488f2e226</AddInId>
-		<ClientId>e7ab025c-7447-47e4-b056-8afd9636e676</ClientId>
+		<AddInId>804B1052-F742-4951-8576-C261D1993109</AddInId>
+		<ClientId>e7ab025c-7447-47e4-b056-8afd9636e671</ClientId>
 		<FullClassName>SpaceTrackerClass</FullClassName>
-		<VendorId>SebastianEsser</VendorId>
+		<VendorId>SebastianEsser_2</VendorId>
 		<VendorDescription>Sebastian Esser</VendorDescription>
 
 	</AddIn>
@@ -14,3 +14,4 @@
 
 <!--This file works if Revit is set as an external app inside the debug menu of this sln -->
 
+<!--Place it here: C:\Users\ga38hep\AppData\Roaming\Autodesk\Revit\Addins\2022 -->

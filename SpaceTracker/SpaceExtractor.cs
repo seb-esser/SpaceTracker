@@ -8,31 +8,61 @@ namespace SpaceTracker
 {
     public class SpaceExtractor
     {
-        private void extractAdjacentRooms(Room room, ref Document doc)
+        /// <summary>
+        /// Dflt constructor
+        /// </summary>
+        public SpaceExtractor()
         {
-            IList<IList<BoundarySegment>> boundaries
-                = room.GetBoundarySegments(new SpatialElementBoundaryOptions());
+        }
 
-            int n = boundaries.Count;
+        /// <summary>
+        /// Extracts the existing situation from a model 
+        /// </summary>
+        /// <param name="doc"></param>
+        public void CreateInitialGraph(Document doc)
+        {
 
-            int iBoundary = 0;
+            RoomFilter filter = new RoomFilter();
 
-            foreach (IList b in boundaries)
+            // Apply the filter to the elements in the active document
+            FilteredElementCollector collector = new FilteredElementCollector(doc);
+            IList<Element> rooms = collector.WherePasses(filter).ToElements();
+
+            foreach (var element in rooms)
             {
-                ++iBoundary;
-                var iSegment = 0;
-                foreach (BoundarySegment s in b)
+                Debug.WriteLine("Room: " + element.Name);
+                var room = (Room)element;
+                IList<IList<BoundarySegment>> boundaries
+                    = room.GetBoundarySegments(new SpatialElementBoundaryOptions());
+
+                int iBoundary = 0;
+                foreach (IList<BoundarySegment> b in boundaries)
                 {
-                    ++iSegment;
-                    ElementId neighbourId = s.ElementId;
-
-                    Element neighbour = doc.GetElement(neighbourId);
-
-                    Curve curve = s.GetCurve();
-                    
-                    if (neighbour is Room)
+                    ++iBoundary;
+                    var iSegment = 0;
+                    foreach (BoundarySegment s in b)
                     {
-                        Debug.WriteLine(neighbour.Id);
+                        ++iSegment;
+                        // get neighbor element
+                        ElementId neighborId = s.ElementId;
+                        Element neighbor = doc.GetElement(neighborId);
+
+                        Curve curve = s.GetCurve();
+
+                        if (neighbor is Room)
+                        {
+                            Debug.WriteLine("\tNeighbor Type: Room - ID:" + neighbor.Id);
+                        }
+
+                        else if (neighbor is Wall)
+                        {
+                            Debug.WriteLine("\tNeighbor Type: Wall - ID: " + neighbor.Id);
+                        }
+
+                        else
+                        {
+                            Debug.WriteLine("\tNeighbor Type: Undefined - ID: " + neighbor.Id);
+                        }
                     }
                 }
             }

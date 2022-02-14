@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Autodesk.Revit.DB;
@@ -21,7 +22,7 @@ namespace SpaceTracker
         /// <param name="doc"></param>
         public void CreateInitialGraph(Document doc)
         {
-
+            // -- Rooms and walls adjacent to room -- // 
             RoomFilter filter = new RoomFilter();
 
             // Apply the filter to the elements in the active document
@@ -34,37 +35,55 @@ namespace SpaceTracker
                 var room = (Room)element;
                 IList<IList<BoundarySegment>> boundaries
                     = room.GetBoundarySegments(new SpatialElementBoundaryOptions());
-
-                int iBoundary = 0;
+                
                 foreach (IList<BoundarySegment> b in boundaries)
                 {
-                    ++iBoundary;
-                    var iSegment = 0;
+                    // loop over all elements adjacent to current room
                     foreach (BoundarySegment s in b)
                     {
-                        ++iSegment;
+                        
                         // get neighbor element
                         ElementId neighborId = s.ElementId;
-                        Element neighbor = doc.GetElement(neighborId);
-
-                        Curve curve = s.GetCurve();
-
-                        if (neighbor is Room)
+                        if (neighborId.IntegerValue == -1)
                         {
-                            Debug.WriteLine("\tNeighbor Type: Room - ID:" + neighbor.Id);
+                            Debug.WriteLine("Something went wrong when extracting Element ID " + neighborId);
+                            continue;
                         }
 
-                        else if (neighbor is Wall)
+                        Element neighbor = doc.GetElement(neighborId);
+
+                        if (neighbor is Wall)
                         {
                             Debug.WriteLine("\tNeighbor Type: Wall - ID: " + neighbor.Id);
                         }
 
                         else
                         {
-                            Debug.WriteLine("\tNeighbor Type: Undefined - ID: " + neighbor.Id);
+                            try
+                            {
+                                Debug.WriteLine("\tNeighbor Type: Undefined - ID: " + neighbor.Id);
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.WriteLine(e);
+                            }
+                            
                         }
                     }
                 }
+            }
+            
+            // -- doors -- // 
+
+            var doorCollector = new FilteredElementCollector(doc)
+                .OfCategory(BuiltInCategory.OST_Doors);
+            var doors = doorCollector.ToElements();
+
+            foreach (var door in doors)
+            {
+                var inst = (FamilyInstance) door;
+                var host = inst.Host;
+                Debug.WriteLine("Door ID: " + door.Id + " - HostId: " + host.Id );
             }
 
         }

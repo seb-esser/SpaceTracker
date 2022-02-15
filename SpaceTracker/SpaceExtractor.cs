@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 
@@ -9,11 +10,15 @@ namespace SpaceTracker
 {
     public class SpaceExtractor
     {
+
+        private Neo4JConnector Connector; 
+
         /// <summary>
         /// Dflt constructor
         /// </summary>
         public SpaceExtractor()
         {
+            Connector = new Neo4JConnector();
         }
 
         /// <summary>
@@ -31,8 +36,15 @@ namespace SpaceTracker
 
             foreach (var element in rooms)
             {
-                Debug.WriteLine("Room: " + element.Name);
                 var room = (Room)element;
+
+                // capture result
+                Debug.WriteLine("Room: " + room.Name);
+
+                string cy = "MERGE (r:Room{Name: \"" + room.Name + "\", ElementId: " + room.Id + "})";
+                Connector.RunCypherQuery(cy);
+
+                
                 IList<IList<BoundarySegment>> boundaries
                     = room.GetBoundarySegments(new SpatialElementBoundaryOptions());
                 
@@ -55,6 +67,10 @@ namespace SpaceTracker
                         if (neighbor is Wall)
                         {
                             Debug.WriteLine("\tNeighbor Type: Wall - ID: " + neighbor.Id);
+
+                            cy = "MATCH (r: Room{ElementId:" + room.Id + "}) MERGE (w:Wall{ElementId: " + neighbor.Id + ", Name: \""+ neighbor.Name + "\"})  MERGE (w)-[:BOUNDS]->(r)"; 
+                            Connector.RunCypherQuery(cy);
+                            Thread.Sleep(500);
                         }
 
                         else
@@ -72,18 +88,27 @@ namespace SpaceTracker
                     }
                 }
             }
-            
+
             // -- doors -- // 
 
+            Debug.WriteLine("--");
+
             var doorCollector = new FilteredElementCollector(doc)
-                .OfCategory(BuiltInCategory.OST_Doors);
+                .OfCategory(BuiltInCategory.OST_Doors).OfClass(typeof(FamilyInstance));
+
             var doors = doorCollector.ToElements();
+
 
             foreach (var door in doors)
             {
                 var inst = (FamilyInstance) door;
-                var host = inst.Host;
-                Debug.WriteLine("Door ID: " + door.Id + " - HostId: " + host.Id );
+                var wall = inst.Host;
+                Debug.WriteLine("Door ID: " + door.Id + " - HostId: " + wall.Id );
+
+                Connector.RunCypherQuery("MATCH (w: Wall{ElementId:" + wall.Id + "})" + 
+                                         "MERGE (d:Door{ElementId:" + inst.Id.IntegerValue + ", Name: \"" +inst.Name + "\" })" + 
+                                         "MERGE (d)-[:CONTAINED_IN]->(w)");
+                
             }
 
         }

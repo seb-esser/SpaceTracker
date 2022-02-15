@@ -82,6 +82,7 @@ namespace SpaceTracker
 
         private void documentOpened(object sender, DocumentOpenedEventArgs e)
         {
+            
             // get document from event args.
             Document doc = e.Document;
 

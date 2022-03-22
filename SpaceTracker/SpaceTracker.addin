@@ -3,10 +3,10 @@
 	<AddIn Type="Application">
 		<Name>SpaceTracker</Name>
 		<Assembly>SpaceTracker.dll</Assembly>
-		<AddInId>804B1052-F742-4951-8576-C261D1993109</AddInId>
+		<AddInId>804B1052-F742-4951-8576-C261D1993110</AddInId>
 		<ClientId>e7ab025c-7447-47e4-b056-8afd9636e671</ClientId>
-		<FullClassName>SpaceTrackerClass</FullClassName>
-		<VendorId>SebastianEsser_2</VendorId>
+		<FullClassName>SpaceTracker.SpaceTrackerClass</FullClassName>
+		<VendorId>SebastianEsser</VendorId>
 		<VendorDescription>Sebastian Esser</VendorDescription>
 
 	</AddIn>

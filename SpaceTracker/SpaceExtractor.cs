@@ -30,12 +30,11 @@ namespace SpaceTracker
         /// <param name="doc"></param>
         public void CreateInitialGraph(Document doc)
         {
-
             // Filename  
             string fileName = "neo4j_commands.txt";
 
             string cmds = "";
-            
+
 
             // -- Rooms and walls adjacent to room -- // 
             RoomFilter filter = new RoomFilter();
@@ -43,6 +42,7 @@ namespace SpaceTracker
             // Apply the filter to the elements in the active document
             FilteredElementCollector collector = new FilteredElementCollector(doc);
             IList<Element> rooms = collector.WherePasses(filter).ToElements();
+
 
             foreach (var element in rooms)
             {
@@ -55,10 +55,23 @@ namespace SpaceTracker
                 Neo4jConnector.RunCypherQuery(cy);
                 cmds += cy + "\n";
 
-                string sql = "INSERT INTO Room (ElementId, Name) VALUES (" + room.Id + ", '" + room.Name + "\')";
-                //SqLiteConnector.runSQLQuery(sql);
+                string sql = "INSERT INTO Room (ElementId, Name) VALUES (" + room.Id + ", '" + room.Name + "\');";
+                SqLiteConnector.runSQLQuery(sql);
 
-                
+                // create level node
+                var current_level = room.Level;
+                Debug.WriteLine("Level: " + current_level.Name);
+
+                cy = "MATCH (r:Room{ElementId:" + room.Id + "}) MERGE (l:Level{Name: \"" + current_level.Name + "\", ElementId: " + current_level.Id + "}) MERGE (l)-[:CONTAINS]->(r)";
+                Neo4jConnector.RunCypherQuery(cy);
+                cmds += cy + "\n";
+
+                //Insert level into tables
+                sql = "INSERT INTO Level (ElementId, Name) VALUES (" + current_level.Id + ", '" + current_level.Name + "');";
+                SqLiteConnector.runSQLQuery(sql);
+                sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + current_level.Id + ", '" + room.Id + "');";
+                SqLiteConnector.runSQLQuery(sql);
+
                 IList<IList<BoundarySegment>> boundaries
                     = room.GetBoundarySegments(new SpatialElementBoundaryOptions());
                 
@@ -87,9 +100,17 @@ namespace SpaceTracker
                             Thread.Sleep(2000);
                             cmds += cy + "\n";
 
-                            sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + neighbor.Id + ", '" + neighbor.Name + "')";
-                            // SqLiteConnector.runSQLQuery(sql);
-                            sql = "INSERT INTO bounds (WallId, RoomId) VALUES (" + neighbor.Id + ", " + room.Id + ")";
+                            // make level connection
+                            cy = "MATCH (l:Level{ElementId: " + neighbor.LevelId + "}), (w:Wall{ElementId: " + neighbor.Id + ", Name: \"" + neighbor.Name + "\"}) MERGE (l)-[:CONTAINS]->(w)";
+                            Neo4jConnector.RunCypherQuery(cy);
+                            cmds += cy + "\n";
+
+                            sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + neighbor.Id + ", '" + neighbor.Name + "');";
+                            SqLiteConnector.runSQLQuery(sql);
+                            sql = "INSERT INTO bounds (WallId, RoomId) VALUES (" + neighbor.Id + ", " + room.Id + ");";
+                            SqLiteConnector.runSQLQuery(sql);
+                            // insert level into table
+                            sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + neighbor.LevelId + ", " + neighbor.Id + ");";
                             SqLiteConnector.runSQLQuery(sql);
                         }
 
@@ -131,8 +152,16 @@ namespace SpaceTracker
                 Neo4jConnector.RunCypherQuery(cy);
                 cmds += cy + "\n";
 
-                string sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", \"" + door.Name + "\", " + wall.Id + ")";
-                // SqLiteConnector.runSQLQuery(sql);
+                // make level connection
+                cy = "MATCH (d:Door{ElementId:" + inst.Id.IntegerValue + ", Name :\"" + inst.Name + "\" }), (l:Level{ElementId: " + inst.LevelId + "}) MERGE (l)-[:CONTAINS]->(d)";
+                Neo4jConnector.RunCypherQuery(cy);
+                cmds += cy + "\n";
+
+                string sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", \"" + door.Name + "\", " + wall.Id + ");";
+                SqLiteConnector.runSQLQuery(sql);
+                // insert level into table
+                sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + door.LevelId + ", " + door.Id + ");";
+                SqLiteConnector.runSQLQuery(sql);
             }
 
             File.WriteAllText(@"C:\sqlite_tmp\neo4jcmds.txt", cmds);

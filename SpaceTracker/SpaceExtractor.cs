@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 
@@ -12,8 +13,9 @@ namespace SpaceTracker
     public class SpaceExtractor
     {
 
-        public Neo4JConnector Neo4jConnector;
-        private SQLiteConnector SqLiteConnector;
+        //private Neo4JConnector Neo4jConnector;
+        //private SQLiteConnector SqLiteConnector;
+        private readonly CommandManager cmdManager;
 
 
         /// <summary>
@@ -21,19 +23,22 @@ namespace SpaceTracker
         /// </summary>
         public SpaceExtractor()
         {
-            Neo4jConnector = new Neo4JConnector();
-            SqLiteConnector = new SQLiteConnector();
+            var Neo4jConnector = new Neo4JConnector();
+            var SqLiteConnector = new SQLiteConnector();
+            cmdManager = new CommandManager(Neo4jConnector, SqLiteConnector);
         }
 
         /// <summary>
         /// Extracts the existing situation from a model 
         /// </summary>
         /// <param name="doc"></param>
-        public async void CreateInitialGraph(Document doc)
+        public void CreateInitialGraph(Document doc)
         {
-            // List of string for commands
-            List<string> cypherCommands = new List<string>();
-
+            // create stopwatch to measure the elapsed time
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+            Debug.WriteLine("#--------#\nTimer started.\n#--------#");
+            
             // Get all levels
             FilteredElementCollector collector = new FilteredElementCollector(doc);
             IList<Element> levels = collector.OfClass(typeof(Level)).ToElements();
@@ -44,12 +49,9 @@ namespace SpaceTracker
                 Debug.WriteLine($"Level: {lvl.Name}, ID: {lvl.Id}");
 
                 string cy = "MERGE (l:Level{Name: \"" + lvl.Name + "\", ElementId: " + lvl.Id + "})";
-                cypherCommands.Add(cy);
-                await Neo4jConnector.RunCypherQueryAsync(cy);
-                //_ = Neo4jConnector.RunCypherQueryAsync(cy);
+                cmdManager.cypherCommands.Add(cy);
 
                 string sql = "INSERT INTO Level (ElementId, Name) VALUES (" + lvl.Id + ", '" + lvl.Name + "');";
-                SqLiteConnector.runSQLQuery(sql);
 
                 // get all Elements of type Room in the current level
                 ElementLevelFilter lvlFilter = new ElementLevelFilter(lvl.Id);
@@ -67,15 +69,13 @@ namespace SpaceTracker
                     cy = "MATCH (l:Level{ElementId:" + room.LevelId + "}) " +
                          "MERGE (r:Room{Name: \"" + room.Name + "\", ElementId: " + room.Id + "}) " +
                          "MERGE (l)-[:CONTAINS]->(r)";
-                    cypherCommands.Add(cy);
-                    await Neo4jConnector.RunCypherQueryAsync(cy);
-                    //_ = Neo4jConnector.RunCypherQueryAsync(cy);
+                    cmdManager.cypherCommands.Add(cy);
 
                     sql = "INSERT INTO Room (ElementId, Name) VALUES (" + room.Id + ", '" + room.Name + "\');";
-                    SqLiteConnector.runSQLQuery(sql);
+                    cmdManager.sqlCommands.Add(sql);
                     //make level connection
                     sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + room.LevelId + ", '" + room.Id + "');";
-                    SqLiteConnector.runSQLQuery(sql);
+                    cmdManager.sqlCommands.Add(sql);
 
                     // get all boundaries
                     IList<IList<BoundarySegment>> boundaries
@@ -106,17 +106,15 @@ namespace SpaceTracker
                                      "MATCH (l:Level{ElementId:" + neighbor.LevelId + "}) " +
                                      "MERGE (w:Wall{ElementId: " + neighbor.Id + ", Name: \"" + neighbor.Name + "\"})  " +
                                      "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
-                                cypherCommands.Add(cy);
-                                await Neo4jConnector.RunCypherQueryAsync(cy);
-                                //_ = Neo4jConnector.RunCypherQueryAsync(cy);
+                                cmdManager.cypherCommands.Add(cy);
 
                                 sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + neighbor.Id + ", '" + neighbor.Name + "');";
-                                SqLiteConnector.runSQLQuery(sql);
+                                cmdManager.sqlCommands.Add(sql);
                                 sql = "INSERT INTO bounds (WallId, RoomId) VALUES (" + neighbor.Id + ", " + room.Id + ");";
-                                SqLiteConnector.runSQLQuery(sql);
+                                cmdManager.sqlCommands.Add(sql);
                                 // make level connection
                                 sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + neighbor.LevelId + ", " + neighbor.Id + ");";
-                                SqLiteConnector.runSQLQuery(sql);
+                                cmdManager.sqlCommands.Add(sql);
                             }
 
                             else
@@ -153,22 +151,24 @@ namespace SpaceTracker
                          "MATCH (l:Level{ElementId:" + door.LevelId + "})" +
                          "MERGE (d:Door{ElementId:" + inst.Id.IntegerValue + ", Name: \"" + inst.Name + "\" })" +
                          "MERGE (l)-[:CONTAINS]->(d)-[:CONTAINED_IN]->(w)";
-                    cypherCommands.Add(cy);
-                    await Neo4jConnector.RunCypherQueryAsync(cy);
-                    //_ = Neo4jConnector.RunCypherQueryAsync(cy);
+                    cmdManager.cypherCommands.Add(cy);
 
 
                     sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", \"" + door.Name + "\", " + wall.Id + ");";
-                    SqLiteConnector.runSQLQuery(sql);
+                    cmdManager.sqlCommands.Add(sql);
                     // insert level into table
                     sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + door.LevelId + ", " + door.Id + ");";
-                    SqLiteConnector.runSQLQuery(sql);
+                    cmdManager.sqlCommands.Add(sql);
                 }
             }
 
             // write commands to file
-            var cmds = string.Join("\n", cypherCommands);
+            var cmds = string.Join("\n", cmdManager.cypherCommands);
             File.WriteAllText(@"C:\sqlite_tmp\neo4jcmds.txt", cmds);
+
+            // print out the elapsed time and stop the timer
+            Debug.WriteLine($"#--------#\nTimer stopped: {timer.ElapsedMilliseconds}ms\n#--------#");
+            timer.Stop();
         }
     }
 }

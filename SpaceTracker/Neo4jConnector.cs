@@ -22,6 +22,14 @@ namespace SpaceTracker
 
         }
 
+        public void RunCypherQuery(string query)
+        {
+            IDriver driver = GraphDatabase.Driver("neo4j://localhost:7687", AuthTokens.Basic(_username, _password));
+            using (var session = driver.Session())
+            {
+                session.Run(query);
+            }
+        }
         /// <summary>
         /// performs a cypher query
         /// </summary>

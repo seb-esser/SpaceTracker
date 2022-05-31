@@ -11,6 +11,7 @@ namespace SpaceTracker
     {
         private string _username;
         private string _password;
+        private bool _blockExecution = false;
 
         /// <summary>
         /// public constructor
@@ -24,6 +25,10 @@ namespace SpaceTracker
 
         public void RunCypherQuery(string query)
         {
+            if (_blockExecution)
+            {
+                return;
+            }
             IDriver driver = GraphDatabase.Driver("neo4j://localhost:7687", AuthTokens.Basic(_username, _password));
             using (var session = driver.Session())
             {
@@ -36,7 +41,10 @@ namespace SpaceTracker
         /// <param name="query"></param>
         public async Task RunCypherQueryAsync(string query)
         {
-
+            if (_blockExecution)
+            {
+                return;
+            }
             IDriver driver = GraphDatabase.Driver("neo4j://localhost:7687", AuthTokens.Basic(_username, _password));
             IAsyncSession session = driver.AsyncSession(o => o.WithDatabase("neo4j"));
 

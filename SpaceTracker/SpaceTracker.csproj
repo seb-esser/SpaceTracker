@@ -42,12 +42,15 @@
     <Reference Include="Neo4j.Driver, Version=4.4.6.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Neo4j.Driver.4.4.0\lib\netstandard2.0\Neo4j.Driver.dll</HintPath>
     </Reference>
+    <Reference Include="Neo4j.Driver.Simple, Version=4.4.6.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Neo4j.Driver.Simple.4.4.0\lib\netstandard2.0\Neo4j.Driver.Simple.dll</HintPath>
+    </Reference>
     <Reference Include="RevitAPI">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2022\RevitAPI.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\Autodesk\Revit 2022\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2022\RevitAPIUI.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\Autodesk\Revit 2022\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SQLitePCLRaw.core, Version=2.0.6.1341, Culture=neutral, PublicKeyToken=1488e028ca7ab535, processorArchitecture=MSIL">
@@ -85,6 +88,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandManager.cs" />
     <Compile Include="Neo4jConnector.cs" />
     <Compile Include="SpaceExtractor.cs" />
     <Compile Include="SpaceTrackerClass.cs" />

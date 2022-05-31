@@ -52,6 +52,7 @@ namespace SpaceTracker
                 cmdManager.cypherCommands.Add(cy);
 
                 string sql = "INSERT INTO Level (ElementId, Name) VALUES (" + lvl.Id + ", '" + lvl.Name + "');";
+                cmdManager.sqlCommands.Add(sql);
 
                 // get all Elements of type Room in the current level
                 ElementLevelFilter lvlFilter = new ElementLevelFilter(lvl.Id);

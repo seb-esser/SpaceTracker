@@ -109,13 +109,24 @@ namespace SpaceTracker
                                      "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
                                 cmdManager.cypherCommands.Add(cy);
 
+                                // create the sql queries, and then check if they have already been executed
+                                // this is sometimes necessary because walls can be adjacent to multiple rooms
                                 sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + neighbor.Id + ", '" + neighbor.Name + "');";
-                                cmdManager.sqlCommands.Add(sql);
+                                if (!cmdManager.sqlCommands.Contains(sql))
+                                {
+                                    cmdManager.sqlCommands.Add(sql);
+                                }                                
                                 sql = "INSERT INTO bounds (WallId, RoomId) VALUES (" + neighbor.Id + ", " + room.Id + ");";
-                                cmdManager.sqlCommands.Add(sql);
+                                if (!cmdManager.sqlCommands.Contains(sql))
+                                {
+                                    cmdManager.sqlCommands.Add(sql);
+                                }
                                 // make level connection
                                 sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + neighbor.LevelId + ", " + neighbor.Id + ");";
-                                cmdManager.sqlCommands.Add(sql);
+                                if (!cmdManager.sqlCommands.Contains(sql))
+                                {
+                                    cmdManager.sqlCommands.Add(sql);
+                                }
                             }
 
                             else
@@ -155,7 +166,7 @@ namespace SpaceTracker
                     cmdManager.cypherCommands.Add(cy);
 
 
-                    sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", \"" + door.Name + "\", " + wall.Id + ");";
+                    sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", " + door.Name + ", " + wall.Id + ");";
                     cmdManager.sqlCommands.Add(sql);
                     // insert level into table
                     sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + door.LevelId + ", " + door.Id + ");";
@@ -164,8 +175,11 @@ namespace SpaceTracker
             }
 
             // write commands to file
-            var cmds = string.Join("\n", cmdManager.cypherCommands);
-            File.WriteAllText(@"C:\sqlite_tmp\neo4jcmds.txt", cmds);
+            var cyCmds = string.Join("\n", cmdManager.cypherCommands);
+            File.WriteAllText(@"C:\sqlite_tmp\neo4jcmds.txt", cyCmds);
+
+            var sqlCmds = string.Join("\n", cmdManager.sqlCommands);
+            File.WriteAllText(@"C:\sqlite_tmp\neo4jcmds.txt", sqlCmds);
 
             // print out the elapsed time and stop the timer
             Debug.WriteLine($"#--------#\nTimer stopped: {timer.ElapsedMilliseconds}ms\n#--------#");

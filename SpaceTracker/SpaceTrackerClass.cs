@@ -87,6 +87,8 @@ namespace SpaceTracker
             Document doc = e.Document;
 
             var extractor = new SpaceExtractor();
+            // Delete existing data
+            extractor.DeleteExistingGraph();
             extractor.CreateInitialGraph(doc);
 
             // get all spaces and build graph from existing model

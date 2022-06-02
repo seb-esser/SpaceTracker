@@ -72,7 +72,7 @@ namespace SpaceTracker
                          "MERGE (l)-[:CONTAINS]->(r)";
                     cmdManager.cypherCommands.Add(cy);
 
-                    sql = "INSERT INTO Room (ElementId, Name) VALUES (" + room.Id + ", '" + room.Name + "\');";
+                    sql = "INSERT INTO Room (ElementId, Name) VALUES (" + room.Id + ", '" + room.Name + "');";
                     cmdManager.sqlCommands.Add(sql);
                     //make level connection
                     sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + room.LevelId + ", '" + room.Id + "');";
@@ -131,15 +131,7 @@ namespace SpaceTracker
 
                             else
                             {
-                                try
-                                {
-                                    Debug.WriteLine("\tNeighbor Type: Undefined - ID: " + neighbor.Id);
-                                }
-                                catch (Exception e)
-                                {
-                                    Debug.WriteLine(e);
-                                }
-
+                                Debug.WriteLine("\tNeighbor Type: Undefined - ID: " + neighbor.Id);
                             }
                         }
                     }
@@ -166,7 +158,7 @@ namespace SpaceTracker
                     cmdManager.cypherCommands.Add(cy);
 
 
-                    sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", " + door.Name + ", " + wall.Id + ");";
+                    sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", '" + door.Name + "', " + wall.Id + ");";
                     cmdManager.sqlCommands.Add(sql);
                     // insert level into table
                     sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + door.LevelId + ", " + door.Id + ");";
@@ -184,6 +176,31 @@ namespace SpaceTracker
             // print out the elapsed time and stop the timer
             Debug.WriteLine($"#--------#\nTimer stopped: {timer.ElapsedMilliseconds}ms\n#--------#");
             timer.Stop();
+        }
+
+        // Deletes all previously existing data (convenient for debugging)
+        public void DeleteExistingGraph()
+        {
+            Debug.WriteLine("Existing graph is being deleted...");
+            // Delete all neo4j data
+            string cy = "MATCH (n) DETACH DELETE n";
+            cmdManager.cypherCommands.Add(cy);
+
+            Debug.WriteLine("Existing table data is being deleted...\n");
+            // Delete all sqlite data
+            string sql = "DELETE FROM Level";
+            cmdManager.sqlCommands.Add(sql);
+            sql = "DELETE FROM Room";
+            cmdManager.sqlCommands.Add(sql);
+            sql = "DELETE FROM Wall";
+            cmdManager.sqlCommands.Add(sql);
+            sql = "DELETE FROM Door";
+            cmdManager.sqlCommands.Add(sql);
+            sql = "DELETE FROM contains";
+            cmdManager.sqlCommands.Add(sql);
+            sql = "DELETE FROM bounds";
+            cmdManager.sqlCommands.Add(sql);
+
         }
     }
 }

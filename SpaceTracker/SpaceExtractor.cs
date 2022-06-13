@@ -202,5 +202,269 @@ namespace SpaceTracker
             cmdManager.sqlCommands.Add(sql);
 
         }
+
+        public void UpdateGraph(Document doc, ICollection<ElementId> addedElementIds, ICollection<ElementId> deletedElementIds, ICollection<ElementId> modifiedElementIds)
+        {
+            Debug.WriteLine("Starting to update Graph...\n");
+            string cy;
+            string sql;
+            // delete nodes
+            foreach (ElementId id in deletedElementIds)
+            {
+                Debug.WriteLine($"Deleting Node with ID: {id}");
+                Element e = doc.GetElement(id);
+
+                cy = "MATCH (e {ElementId: " + id + "}) DETACH DELETE e";
+                cmdManager.cypherCommands.Add(cy);
+
+                if (typeof(Room).IsAssignableFrom(e.GetType()))
+                {
+                    sql = "DELETE FROM Room WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM bounds WHERE RoomId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM contains WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+                }
+                else if (typeof(Wall).IsAssignableFrom(e.GetType()))
+                {
+                    sql = "DELETE FROM Wall WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM bounds WHERE WallId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM contains WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+                }
+                else if (typeof(Level).IsAssignableFrom(e.GetType()))
+                {
+                    sql = "DELETE FROM Level Where ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELTE FROM contains WHERE LevelId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+                }
+                
+
+
+            }
+
+            // modify nodes
+            foreach (ElementId id in modifiedElementIds)
+            {
+                Element e = doc.GetElement(id);
+
+
+                // change properties
+                cy = "MATCH (e {ElementId: " + id + "}) SET e.Name = '" + e.Name + "'";
+                cmdManager.cypherCommands.Add(cy);
+
+                // change relationships
+                if (typeof(Room).IsAssignableFrom(e.GetType()))
+                {
+                    Debug.WriteLine($"Modifying Node with ID: {id} and Name: {e.Name}");
+
+                    sql = "UPDATE Room SET Name = " + e.Name + "WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    Room room = e as Room;
+                    // get all boundaries
+                    IList<IList<BoundarySegment>> boundaries
+                    = room.GetBoundarySegments(new SpatialElementBoundaryOptions());
+
+                    foreach (IList<BoundarySegment> b in boundaries)
+                    {
+                        // Iterate over all elements adjacent to current room
+                        foreach (BoundarySegment s in b)
+                        {
+                            // get neighbor element
+                            ElementId neighborId = s.ElementId;
+                            if (neighborId.IntegerValue == -1)
+                            {
+                                Debug.WriteLine("Something went wrong when extracting Element ID " + neighborId);
+                                continue;
+                            }
+
+                            Element neighbor = doc.GetElement(neighborId);
+                            var levelId = neighbor.LevelId;
+
+                            if (neighbor is Wall)
+                            {
+                                cy = "MATCH (r:Room{ElementId: " + room.Id + "})" +
+                                     "MATCH (w:Wall{ElementId: " + neighbor.Id + "})" +
+                                     "MATCH (l:Level{ElementId: " + levelId + "})" +
+                                     "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
+                                cmdManager.cypherCommands.Add(cy);
+
+                                sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + neighbor.Id + ", '" + neighbor.Name + "');";
+                                cmdManager.sqlCommands.Add(sql);
+
+                                sql = "INSERT INTO bounds (WallId, RoomId) VALUES (" + neighbor.Id + ", " + room.Id + ");";
+                                cmdManager.sqlCommands.Add(sql);
+
+                                sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + neighbor.LevelId + ", " + neighbor.Id + ");";
+                                cmdManager.sqlCommands.Add(sql);
+
+                                Debug.WriteLine($"Modified Room with ID: {id} and Name: {e.Name}");
+
+
+                            }
+                        }
+                    }
+                }
+                if (typeof(Wall).IsAssignableFrom(e.GetType()))
+                {
+                    Debug.WriteLine($"Modifying Node with ID: {id} and Name: {e.Name}");
+
+                    sql = "UPDATE Wall SET Name = " + e.Name + "WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    // get the room
+                    IList<Element> rooms = getRoomFromWall(doc, e as Wall);
+
+
+                    foreach (Element element in rooms)
+                    {
+                        var room = (Room)element;
+                        var levelId = room.LevelId;
+                        cy = "MATCH (w:Wall{ElementId: " + id + "}) " +
+                             "MATCH (r:Room{ElementId: " + room.Id + "})" +
+                             "MATCH (l:Level{ELementId: " + levelId + "})" +
+                             "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
+                        cmdManager.cypherCommands.Add(cy);
+
+                        sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + id + ", '" + e.Name + "');";
+                        cmdManager.sqlCommands.Add(sql);
+                        Debug.WriteLine($"Modified Wall with ID: {id} and Name: {e.Name} ");
+                    }
+                }
+
+                if (typeof(Level).IsAssignableFrom(e.GetType()))
+                {
+                    Debug.WriteLine($"Modifying Node with ID: {id} and Name: {e.Name}");
+
+                    sql = "UPDATE Level SET Name = " + e.Name + "WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    ElementLevelFilter lvlFilter = new ElementLevelFilter(id);
+                    FilteredElementCollector collector = new FilteredElementCollector(doc);
+                    IList<Element> elementsOnLevel = collector.WherePasses(lvlFilter).ToElements();
+
+                    foreach (Element element in elementsOnLevel)
+                    {
+                        if (typeof(Wall).IsAssignableFrom(element.GetType()))
+                        {
+                            cy = "MATCH (l:Level{ElementId: " + id + "}) " +
+                                 "MATCH (w:Wall{ElementId: " + element.Id + "}) " +
+                                 "MERGE (l)-[:CONTAINS]->(w)";
+                            cmdManager.cypherCommands.Add(cy);
+
+                            sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + id + ", '" + e.Name + "');";
+                            cmdManager.sqlCommands.Add(sql);
+
+                            sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + id + ", " + element.Id + ");";
+                            cmdManager.sqlCommands.Add(sql);
+                        }
+                        else if (typeof(Room).IsAssignableFrom(element.GetType()))
+                        {
+                            cy = "MATCH (l:Level{ElementId: " + id + "}) " +
+                                 "MATCH (r:Room{ElementId: " + element.Id + "}) " +
+                                 "MERGE (l)-[:CONTAINS]->(r)";
+                            cmdManager.cypherCommands.Add(cy);
+
+                            sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + id + ", '" + e.Name + "');";
+                            cmdManager.sqlCommands.Add(sql);
+
+                            sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + id + ", '" + element.Id + "');";
+                            cmdManager.sqlCommands.Add(sql);
+                        }
+
+                        Debug.WriteLine($"Modified Level with ID: {id} and Name: {e.Name}");
+                    }
+                }
+            }
+
+            //add nodes
+            foreach (ElementId id in addedElementIds)
+            {
+                Element e = doc.GetElement(id);
+
+                if (typeof(Room).IsAssignableFrom(e.GetType()))
+                {
+                    var room = (Room)e;
+
+                    // capture result
+                    Debug.WriteLine($"Room: {room.Name}, ID: {room.Id}");
+
+                    cy = "MATCH (l:Level{ElementId:" + room.LevelId + "}) " +
+                         "MERGE (r:Room{Name: \"" + room.Name + "\", ElementId: " + room.Id + "}) " +
+                         "MERGE (l)-[:CONTAINS]->(r)";
+                    cmdManager.cypherCommands.Add(cy);
+
+                    // get all boundaries
+                    IList<IList<BoundarySegment>> boundaries
+                    = room.GetBoundarySegments(new SpatialElementBoundaryOptions());
+
+
+                    foreach (IList<BoundarySegment> b in boundaries)
+                    {
+                        // Iterate over all elements adjacent to current room
+                        foreach (BoundarySegment s in b)
+                        {
+
+                            // get neighbor element
+                            ElementId neighborId = s.ElementId;
+                            if (neighborId.IntegerValue == -1)
+                            {
+                                Debug.WriteLine("Something went wrong when extracting Element ID " + neighborId);
+                                continue;
+                            }
+
+                            Element neighbor = doc.GetElement(neighborId);
+
+                            if (neighbor is Wall)
+                            {
+                                Debug.WriteLine($"\tNeighbor Type: Wall - ID: {neighbor.Id}");
+
+                                cy = "MATCH (r:Room{ElementId:" + room.Id + "}) " +
+                                     "MATCH (l:Level{ElementId:" + neighbor.LevelId + "}) " +
+                                     "MERGE (w:Wall{ElementId: " + neighbor.Id + ", Name: \"" + neighbor.Name + "\"}) " +
+                                     "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
+                                cmdManager.cypherCommands.Add(cy);
+                            }
+                            else
+                            {
+                                Debug.WriteLine("\tNeighbor Type: Undefined - ID: " + neighbor.Id);
+                            }
+                        }
+                    }
+                }
+                if (typeof(Wall).IsAssignableFrom(e.GetType()))
+                {
+                    var wall = (Wall)e;
+                    Debug.WriteLine($"Room: {wall.Name}, ID: {wall.Id}");
+
+                    cy = "MERGE (w:Wall{ElementId: " + wall.Id + "})";
+                    cmdManager.cypherCommands.Add(cy);
+                }
+
+
+            }
+        }
+
+        public IList<Element> getRoomFromWall(Document doc, Wall wall)
+        {
+            BoundingBoxXYZ wall_bb = wall.get_BoundingBox(null);
+            Outline outl = new Outline(wall_bb.Min, wall_bb.Max);
+            ElementFilter bbfilter = new BoundingBoxIntersectsFilter(outl);
+
+            IList<Element> rooms = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).WherePasses(bbfilter).ToElements();
+
+            return rooms;
+
+        }
     }
 }

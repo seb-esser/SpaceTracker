@@ -207,14 +207,49 @@ namespace SpaceTracker
         {
             Debug.WriteLine("Starting to update Graph...\n");
             string cy;
-            //string sql;
+            string sql;
             // delete nodes
             foreach (ElementId id in deletedElementIds)
             {
                 Debug.WriteLine($"Deleting Node with ID: {id}");
+                Element e = doc.GetElement(id);
 
                 cy = "MATCH (e {ElementId: " + id + "}) DETACH DELETE e";
                 cmdManager.cypherCommands.Add(cy);
+
+                if (typeof(Room).IsAssignableFrom(e.GetType()))
+                {
+                    sql = "DELETE FROM Room WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM bounds WHERE RoomId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM contains WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+                }
+                else if (typeof(Wall).IsAssignableFrom(e.GetType()))
+                {
+                    sql = "DELETE FROM Wall WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM bounds WHERE WallId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELETE FROM contains WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+                }
+                else if (typeof(Level).IsAssignableFrom(e.GetType()))
+                {
+                    sql = "DELETE FROM Level Where ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
+                    sql = "DELTE FROM contains WHERE LevelId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+                }
+                
+
+
             }
 
             // modify nodes
@@ -231,6 +266,10 @@ namespace SpaceTracker
                 if (typeof(Room).IsAssignableFrom(e.GetType()))
                 {
                     Debug.WriteLine($"Modifying Node with ID: {id} and Name: {e.Name}");
+
+                    sql = "UPDATE Room SET Name = " + e.Name + "WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
                     Room room = e as Room;
                     // get all boundaries
                     IList<IList<BoundarySegment>> boundaries
@@ -258,10 +297,20 @@ namespace SpaceTracker
                                      "MATCH (w:Wall{ElementId: " + neighbor.Id + "})" +
                                      "MATCH (l:Level{ElementId: " + levelId + "})" +
                                      "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
-
                                 cmdManager.cypherCommands.Add(cy);
 
+                                sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + neighbor.Id + ", '" + neighbor.Name + "');";
+                                cmdManager.sqlCommands.Add(sql);
+
+                                sql = "INSERT INTO bounds (WallId, RoomId) VALUES (" + neighbor.Id + ", " + room.Id + ");";
+                                cmdManager.sqlCommands.Add(sql);
+
+                                sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + neighbor.LevelId + ", " + neighbor.Id + ");";
+                                cmdManager.sqlCommands.Add(sql);
+
                                 Debug.WriteLine($"Modified Room with ID: {id} and Name: {e.Name}");
+
+
                             }
                         }
                     }
@@ -269,6 +318,10 @@ namespace SpaceTracker
                 if (typeof(Wall).IsAssignableFrom(e.GetType()))
                 {
                     Debug.WriteLine($"Modifying Node with ID: {id} and Name: {e.Name}");
+
+                    sql = "UPDATE Wall SET Name = " + e.Name + "WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
                     // get the room
                     IList<Element> rooms = getRoomFromWall(doc, e as Wall);
 
@@ -283,6 +336,8 @@ namespace SpaceTracker
                              "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
                         cmdManager.cypherCommands.Add(cy);
 
+                        sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + id + ", '" + e.Name + "');";
+                        cmdManager.sqlCommands.Add(sql);
                         Debug.WriteLine($"Modified Wall with ID: {id} and Name: {e.Name} ");
                     }
                 }
@@ -291,25 +346,40 @@ namespace SpaceTracker
                 {
                     Debug.WriteLine($"Modifying Node with ID: {id} and Name: {e.Name}");
 
+                    sql = "UPDATE Level SET Name = " + e.Name + "WHERE ElementId = " + id;
+                    cmdManager.sqlCommands.Add(sql);
+
                     ElementLevelFilter lvlFilter = new ElementLevelFilter(id);
                     FilteredElementCollector collector = new FilteredElementCollector(doc);
                     IList<Element> elementsOnLevel = collector.WherePasses(lvlFilter).ToElements();
 
                     foreach (Element element in elementsOnLevel)
                     {
-                        if (typeof(Wall).IsAssignableFrom(e.GetType()))
+                        if (typeof(Wall).IsAssignableFrom(element.GetType()))
                         {
                             cy = "MATCH (l:Level{ElementId: " + id + "}) " +
                                  "MATCH (w:Wall{ElementId: " + element.Id + "}) " +
                                  "MERGE (l)-[:CONTAINS]->(w)";
                             cmdManager.cypherCommands.Add(cy);
+
+                            sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + id + ", '" + e.Name + "');";
+                            cmdManager.sqlCommands.Add(sql);
+
+                            sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + id + ", " + element.Id + ");";
+                            cmdManager.sqlCommands.Add(sql);
                         }
-                        else if (typeof(Room).IsAssignableFrom(e.GetType()))
+                        else if (typeof(Room).IsAssignableFrom(element.GetType()))
                         {
                             cy = "MATCH (l:Level{ElementId: " + id + "}) " +
                                  "MATCH (r:Room{ElementId: " + element.Id + "}) " +
                                  "MERGE (l)-[:CONTAINS]->(r)";
                             cmdManager.cypherCommands.Add(cy);
+
+                            sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + id + ", '" + e.Name + "');";
+                            cmdManager.sqlCommands.Add(sql);
+
+                            sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + id + ", '" + element.Id + "');";
+                            cmdManager.sqlCommands.Add(sql);
                         }
 
                         Debug.WriteLine($"Modified Level with ID: {id} and Name: {e.Name}");

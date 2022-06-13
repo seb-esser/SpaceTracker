@@ -64,11 +64,13 @@ namespace SpaceTracker
 
         private void documentChanged(object sender, DocumentChangedEventArgs e)
         {
+            Document doc = e.GetDocument();
             var addedElementIds = e.GetAddedElementIds();
             var deletedElementIds = e.GetDeletedElementIds();
             var modifiedElementIds = e.GetModifiedElementIds();
-            
-            
+
+            var extractor = new SpaceExtractor();
+            extractor.UpdateGraph(doc, addedElementIds, deletedElementIds, modifiedElementIds);
         }
 
         private void documentCreated(object sender, DocumentCreatedEventArgs e)

@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandManager.cs" />
+    <Compile Include="GraphGeneratorCommand.cs" />
     <Compile Include="Neo4jConnector.cs" />
     <Compile Include="SpaceExtractor.cs" />
     <Compile Include="SpaceTrackerClass.cs" />

@@ -9,6 +9,7 @@ namespace SpaceTracker
 {
     public class Neo4JConnector
     {
+        private string _uri; 
         private string _username;
         private string _password;
         private bool _blockExecution = false;
@@ -18,9 +19,9 @@ namespace SpaceTracker
         /// </summary>
         public Neo4JConnector()
         {
+            _uri = "neo4j+s://44e095ca.databases.neo4j.io";
             _username = "neo4j";
-            _password = "password";
-
+            _password = "EeP5vqoM0e8yGlo1xN2LcACxO33xQJNAcF3NrXgddqs";
         }
 
         public void RunCypherQuery(string query)
@@ -29,12 +30,13 @@ namespace SpaceTracker
             {
                 return;
             }
-            IDriver driver = GraphDatabase.Driver("neo4j://localhost:7687", AuthTokens.Basic(_username, _password));
+            IDriver driver = GraphDatabase.Driver(_uri, AuthTokens.Basic(_username, _password));
             using (var session = driver.Session())
             {
                 session.Run(query);
             }
         }
+
         /// <summary>
         /// performs a cypher query
         /// </summary>
@@ -45,7 +47,7 @@ namespace SpaceTracker
             {
                 return;
             }
-            IDriver driver = GraphDatabase.Driver("neo4j://localhost:7687", AuthTokens.Basic(_username, _password));
+            IDriver driver = GraphDatabase.Driver(_uri, AuthTokens.Basic(_username, _password));
             IAsyncSession session = driver.AsyncSession(o => o.WithDatabase("neo4j"));
 
             try

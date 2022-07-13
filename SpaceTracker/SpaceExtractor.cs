@@ -38,7 +38,11 @@ namespace SpaceTracker
             Stopwatch timer = new Stopwatch();
             timer.Start();
             Debug.WriteLine("#--------#\nTimer started.\n#--------#");
-            
+
+            // Create project node
+            string cy_proj = "MERGE (p:Project{Name: \"" + doc.Title + "\", GUID: " + "\"" + doc.GetProjectId() + "\"" + "})";
+            cmdManager.cypherCommands.Add(cy_proj);
+
             // Get all levels
             FilteredElementCollector collector = new FilteredElementCollector(doc);
             IList<Element> levels = collector.OfClass(typeof(Level)).ToElements();
@@ -48,7 +52,9 @@ namespace SpaceTracker
             {
                 Debug.WriteLine($"Level: {lvl.Name}, ID: {lvl.Id}");
 
-                string cy = "MERGE (l:Level{Name: \"" + lvl.Name + "\", ElementId: " + lvl.Id + "})";
+                string cy = "MATCH (p:Project{Name: \"" + doc.Title + "\", GUID: " + "\"" + doc.GetProjectId() + "\"" + "})" +
+                    "MERGE (l:Level{Name: \"" + lvl.Name + "\", ElementId: " + lvl.Id + "})" +
+                    "MERGE (p)-[:CONTAINS]->(l)";
                 cmdManager.cypherCommands.Add(cy);
 
                 string sql = "INSERT INTO Level (ElementId, Name) VALUES (" + lvl.Id + ", '" + lvl.Name + "');";
@@ -148,12 +154,13 @@ namespace SpaceTracker
                 foreach (var door in doors)
                 {
                     var inst = (FamilyInstance)door;
+                    var width = inst.Symbol.get_Parameter(BuiltInParameter.DOOR_WIDTH).AsDouble()/2.71;
                     var wall = inst.Host;
                     Debug.WriteLine($"Door ID: {door.Id}, HostId: {wall.Id}");
 
                     cy = "MATCH (w:Wall{ElementId:" + wall.Id + "})" +
                          "MATCH (l:Level{ElementId:" + door.LevelId + "})" +
-                         "MERGE (d:Door{ElementId:" + inst.Id.IntegerValue + ", Name: \"" + inst.Name + "\" })" +
+                         "MERGE (d:Door{ElementId:" + inst.Id.IntegerValue + ", Name: \"" + inst.Name + "\" " + ", Width: " + width.ToString().Replace(",", ".") + "})"  +
                          "MERGE (l)-[:CONTAINS]->(d)-[:CONTAINED_IN]->(w)";
                     cmdManager.cypherCommands.Add(cy);
 
@@ -164,6 +171,59 @@ namespace SpaceTracker
                     sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + door.LevelId + ", " + door.Id + ");";
                     cmdManager.sqlCommands.Add(sql);
                 }
+            }
+
+            // extract stairs and connecting spaces
+            FilteredElementCollector stairCollector = new FilteredElementCollector(doc);
+            ICollection<Element> elements = stairCollector.WhereElementIsNotElementType().OfCategory(BuiltInCategory.OST_Stairs).ToElements();
+            foreach (Element elem in elements)
+            {
+                var stair = elem as Stairs;
+
+                var height = stair.Height;
+
+                var runIds = stair.GetStairsRuns();
+                foreach (var runId in runIds)
+                {
+                    var element = doc.GetElement(runId);
+                    var ty = element.GetType().Name;
+
+                    if (ty == "StairsRun")
+                    {
+                        var stairsRun = element as StairsRun;
+
+                        // get footprint of stairsRun
+                        CurveLoop lines = stairsRun.GetFootprintBoundary();
+                        foreach (Line line in lines)
+                        {
+                            Debug.WriteLine(line.Origin.ToString());
+                        }
+                        foreach (Line line in lines)
+                        {
+                            Debug.WriteLine(line.Direction.ToString());
+                        }
+                        foreach (Line line in lines)
+                        {
+                            Debug.WriteLine(line.Length);
+                        }
+                    }
+                    
+                }
+
+                // get upper room
+                Room upperRoom = doc.GetRoomAtPoint(new XYZ(1,2,3));
+
+                // get base room
+                Room baseRoom = doc.GetRoomAtPoint(new XYZ(1, 2, 3));
+                
+            }
+
+            // extract stairs and connecting spaces
+            FilteredElementCollector rampCollector = new FilteredElementCollector(doc);
+            ICollection<Element> ramps = rampCollector.WhereElementIsNotElementType().OfCategory(BuiltInCategory.OST_Ramps).ToElements();
+            foreach (Element ramp in ramps)
+            {
+                Debug.WriteLine(ramp.Id);
             }
 
             // write commands to file

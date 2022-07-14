@@ -19,9 +19,9 @@ namespace SpaceTracker
         /// </summary>
         public Neo4JConnector()
         {
-            _uri = "neo4j+s://44e095ca.databases.neo4j.io";
-            _username = "neo4j";
-            _password = "EeP5vqoM0e8yGlo1xN2LcACxO33xQJNAcF3NrXgddqs";
+            _uri = "YOUR-URL";
+            _username = "YOUR-USERNAME";
+            _password = "YOUR-PASSWORD";
         }
 
         public void RunCypherQuery(string query)

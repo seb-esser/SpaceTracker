@@ -40,7 +40,7 @@ namespace SpaceTracker
             Debug.WriteLine("#--------#\nTimer started.\n#--------#");
 
             // Create project node
-            string cy_proj = "MERGE (p:Project{Name: \"" + doc.Title + "\", GUID: " + "\"" + doc.GetProjectId() + "\"" + "})";
+            string cy_proj = string.Format("MERGE (p:Project{{Name: \"{0}\"}})", doc.Title.ToString());
             cmdManager.cypherCommands.Add(cy_proj);
 
             // Get all levels
@@ -52,12 +52,13 @@ namespace SpaceTracker
             {
                 Debug.WriteLine($"Level: {lvl.Name}, ID: {lvl.Id}");
 
-                string cy = "MATCH (p:Project{Name: \"" + doc.Title + "\", GUID: " + "\"" + doc.GetProjectId() + "\"" + "})" +
-                    "MERGE (l:Level{Name: \"" + lvl.Name + "\", ElementId: " + lvl.Id + "})" +
+                string cy = 
+                    string.Format("MATCH (p:Project{{Name: \"{0}\"}})", doc.Title) +
+                    string.Format("MERGE (l:Level{{Name: \"{0}\", ElementId: {1}}})", lvl.Name, lvl.Id) +
                     "MERGE (p)-[:CONTAINS]->(l)";
                 cmdManager.cypherCommands.Add(cy);
 
-                string sql = "INSERT INTO Level (ElementId, Name) VALUES (" + lvl.Id + ", '" + lvl.Name + "');";
+                string sql = string.Format("INSERT INTO Level (ElementId, Name) VALUES ({0}, '{1}');", lvl.Id, lvl.Name );
                 cmdManager.sqlCommands.Add(sql);
 
                 // get all Elements of type Room in the current level
@@ -73,15 +74,15 @@ namespace SpaceTracker
                     // capture result
                     Debug.WriteLine($"Room: {room.Name}, ID: {room.Id}");
 
-                    cy = "MATCH (l:Level{ElementId:" + room.LevelId + "}) " +
-                         "MERGE (r:Room{Name: \"" + room.Name + "\", ElementId: " + room.Id + "}) " +
-                         "MERGE (l)-[:CONTAINS]->(r)";
+                    cy = string.Format("MATCH (l:Level{{ElementId:{0} }}) ", room.LevelId) +
+                         string.Format("MERGE (r:Room{{Name: \"{0}\", ElementId: {1} }}) ", room.Name, room.Id) +
+                         string.Format("MERGE (l)-[:CONTAINS]->(r)");
                     cmdManager.cypherCommands.Add(cy);
 
-                    sql = "INSERT INTO Room (ElementId, Name) VALUES (" + room.Id + ", '" + room.Name + "');";
+                    sql = string.Format("INSERT INTO Room (ElementId, Name) VALUES ({0}, '{1}');", room.Id, room.Name);
                     cmdManager.sqlCommands.Add(sql);
                     //make level connection
-                    sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + room.LevelId + ", '" + room.Id + "');";
+                    sql = string.Format("INSERT INTO contains (LevelId, ElementId) VALUES ({0}, '{1}');", room.LevelId, room.Id);
                     cmdManager.sqlCommands.Add(sql);
 
                     // get all boundaries
@@ -109,26 +110,26 @@ namespace SpaceTracker
                             {
                                 Debug.WriteLine($"\tNeighbor Type: Wall - ID: {neighbor.Id}");
 
-                                cy = "MATCH (r:Room{ElementId:" + room.Id + "}) " +
-                                     "MATCH (l:Level{ElementId:" + neighbor.LevelId + "}) " +
-                                     "MERGE (w:Wall{ElementId: " + neighbor.Id + ", Name: \"" + neighbor.Name + "\"})  " +
+                                cy = string.Format("MATCH (r:Room{{ElementId:{0} }}) ", room.Id) +
+                                     string.Format("MATCH (l:Level{{ElementId: {0} }}) ", neighbor.LevelId) +
+                                     string.Format("MERGE (w:Wall{{ElementId: {0}, Name: \"{1}\" }})", neighbor.Id, neighbor.Name) +
                                      "MERGE (l)-[:CONTAINS]->(w)-[:BOUNDS]->(r)";
                                 cmdManager.cypherCommands.Add(cy);
 
                                 // create the sql queries, and then check if they have already been executed
                                 // this is sometimes necessary because walls can be adjacent to multiple rooms
-                                sql = "INSERT INTO Wall (ElementId, Name) VALUES (" + neighbor.Id + ", '" + neighbor.Name + "');";
+                                sql = string.Format("INSERT INTO Wall (ElementId, Name) VALUES ({0}, '{1}');", neighbor.Id, neighbor.Name);
                                 if (!cmdManager.sqlCommands.Contains(sql))
                                 {
                                     cmdManager.sqlCommands.Add(sql);
                                 }                                
-                                sql = "INSERT INTO bounds (WallId, RoomId) VALUES (" + neighbor.Id + ", " + room.Id + ");";
+                                sql = string.Format("INSERT INTO bounds (WallId, RoomId) VALUES ({0}, {1});", neighbor.Id, room.Id);
                                 if (!cmdManager.sqlCommands.Contains(sql))
                                 {
                                     cmdManager.sqlCommands.Add(sql);
                                 }
                                 // make level connection
-                                sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + neighbor.LevelId + ", " + neighbor.Id + ");";
+                                sql = string.Format("INSERT INTO contains (LevelId, ElementId) VALUES ({0}, {1});", neighbor.LevelId, neighbor.Id);
                                 if (!cmdManager.sqlCommands.Contains(sql))
                                 {
                                     cmdManager.sqlCommands.Add(sql);
@@ -158,17 +159,17 @@ namespace SpaceTracker
                     var wall = inst.Host;
                     Debug.WriteLine($"Door ID: {door.Id}, HostId: {wall.Id}");
 
-                    cy = "MATCH (w:Wall{ElementId:" + wall.Id + "})" +
-                         "MATCH (l:Level{ElementId:" + door.LevelId + "})" +
-                         "MERGE (d:Door{ElementId:" + inst.Id.IntegerValue + ", Name: \"" + inst.Name + "\" " + ", Width: " + width.ToString().Replace(",", ".") + "})"  +
+                    cy = string.Format("MATCH (w:Wall{{ElementId:{0} }})", wall.Id) +
+                         string.Format("MATCH (l:Level{{ElementId:{0} }})", door.LevelId) +
+                         string.Format("MERGE (d:Door{{ElementId: {0}, Name: \"{1}\" , Width: {2} }})", inst.Id.IntegerValue, inst.Name, width.ToString().Replace(",", ".")) +
                          "MERGE (l)-[:CONTAINS]->(d)-[:CONTAINED_IN]->(w)";
                     cmdManager.cypherCommands.Add(cy);
 
 
-                    sql = "INSERT INTO Door (ElementId, Name, WallId) VALUES (" + door.Id + ", '" + door.Name + "', " + wall.Id + ");";
+                    sql = string.Format("INSERT INTO Door (ElementId, Name, WallId) VALUES ({0}, '{1}', {2});", door.Id, door.Name, wall.Id);
                     cmdManager.sqlCommands.Add(sql);
                     // insert level into table
-                    sql = "INSERT INTO contains (LevelId, ElementId) VALUES (" + door.LevelId + ", " + door.Id + ");";
+                    sql = string.Format("INSERT INTO contains (LevelId, ElementId) VALUES ({0}, {1});", door.LevelId, door.Id);
                     cmdManager.sqlCommands.Add(sql);
                 }
             }

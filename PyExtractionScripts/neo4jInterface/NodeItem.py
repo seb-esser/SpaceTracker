@@ -3,13 +3,12 @@ class NodeItem:
     reflects the node structure from neo4j
     """
 
-    def __init__(self, node_id: int, rel_type: str = None):
+    def __init__(self, node_id: int):
         """
         @param node_id: node id in the graph database
         @param rel_type: rel_type of edge pointing to this node
         """
         self.id = node_id
-        self.rel_type = rel_type
         self.attrs = None
         self.labels = []
         self.node_identifier = ""
@@ -45,10 +44,18 @@ class NodeItem:
         """
         ret_val = []
         for node_raw in raw:
-            node_labels = list(node_raw.labels)
-            node = cls(node_id=int(node_raw.id), rel_type=None)
-            node.set_node_attributes(dict(node_raw._properties))
-            node.labels = node_labels
+            # parse
+            node_id = int(node_raw[0])
+            node_attributes = node_raw[1]
+            node_label = node_raw[2]
+
+            # init instances
+            node = cls(node_id=node_id)
+
+            # save label and attributes
+            node.attrs = node_attributes
+            node.labels.append(node_label)
+
             ret_val.append(node)
 
         return ret_val

@@ -23,7 +23,7 @@ class Neo4jConnector:
         @return:
         """
         try:
-            self.my_driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password), encrypted=False)
+            self.my_driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
         except self.my_driver:
             raise Exception("Oops!  Connection failed.  Try again...")
 

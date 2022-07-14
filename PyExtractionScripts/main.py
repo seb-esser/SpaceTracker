@@ -11,10 +11,13 @@ def write_neo4j_to_csv():
     connector.connect_driver()
 
     # get all nodes
-    cy = "match (n) return PROPERTIES(n), LABELS(n)[0] ORDER BY LABELS(n)[0]"
+    cy = "match (n) return ID(n), PROPERTIES(n), LABELS(n)[0] ORDER BY LABELS(n)[0]"
     res = connector.run_cypher_statement(cy)
     nodes = NodeItem.from_neo4j_response(res)
     pprint(nodes)
+
+    # write nodes
+    desired_types = ["Room", "Door"]
 
 
 # Press the green button in the gutter to run the script.

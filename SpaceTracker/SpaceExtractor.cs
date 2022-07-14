@@ -52,13 +52,13 @@ namespace SpaceTracker
             {
                 Debug.WriteLine($"Level: {lvl.Name}, ID: {lvl.Id}");
 
-                string cy = 
+                string cy =
                     string.Format("MATCH (p:Project{{Name: \"{0}\"}})", doc.Title) +
                     string.Format("MERGE (l:Level{{Name: \"{0}\", ElementId: {1}}})", lvl.Name, lvl.Id) +
                     "MERGE (p)-[:CONTAINS]->(l)";
                 cmdManager.cypherCommands.Add(cy);
 
-                string sql = string.Format("INSERT INTO Level (ElementId, Name) VALUES ({0}, '{1}');", lvl.Id, lvl.Name );
+                string sql = string.Format("INSERT INTO Level (ElementId, Name) VALUES ({0}, '{1}');", lvl.Id, lvl.Name);
                 cmdManager.sqlCommands.Add(sql);
 
                 // get all Elements of type Room in the current level
@@ -122,7 +122,7 @@ namespace SpaceTracker
                                 if (!cmdManager.sqlCommands.Contains(sql))
                                 {
                                     cmdManager.sqlCommands.Add(sql);
-                                }                                
+                                }
                                 sql = string.Format("INSERT INTO bounds (WallId, RoomId) VALUES ({0}, {1});", neighbor.Id, room.Id);
                                 if (!cmdManager.sqlCommands.Contains(sql))
                                 {
@@ -155,7 +155,7 @@ namespace SpaceTracker
                 foreach (var door in doors)
                 {
                     var inst = (FamilyInstance)door;
-                    var width = inst.Symbol.get_Parameter(BuiltInParameter.DOOR_WIDTH).AsDouble()/2.71;
+                    var width = inst.Symbol.get_Parameter(BuiltInParameter.DOOR_WIDTH).AsDouble() / 2.71;
                     var wall = inst.Host;
                     Debug.WriteLine($"Door ID: {door.Id}, HostId: {wall.Id}");
 
@@ -182,6 +182,7 @@ namespace SpaceTracker
                 var stair = elem as Stairs;
 
                 var height = stair.Height;
+                double width = -1;
 
                 var runIds = stair.GetStairsRuns();
                 foreach (var runId in runIds)
@@ -192,6 +193,7 @@ namespace SpaceTracker
                     if (ty == "StairsRun")
                     {
                         var stairsRun = element as StairsRun;
+                        width = stairsRun.ActualRunWidth / 2.71;
 
                         // get footprint of stairsRun
                         CurveLoop lines = stairsRun.GetFootprintBoundary();
@@ -208,23 +210,45 @@ namespace SpaceTracker
                             Debug.WriteLine(line.Length);
                         }
                     }
-                    
+
                 }
 
                 // get upper room
-                Room upperRoom = doc.GetRoomAtPoint(new XYZ(1,2,3));
+                Room upperRoom = doc.GetRoomAtPoint(new XYZ(1, 2, 3));
 
                 // get base room
                 Room baseRoom = doc.GetRoomAtPoint(new XYZ(1, 2, 3));
-                
+
+
+                var baseLevel = stair.get_Parameter(BuiltInParameter.STAIRS_BASE_LEVEL_PARAM);
+                var baseLevelId = baseLevel.AsElementId();
+                var topLevel = stair.get_Parameter(BuiltInParameter.STAIRS_TOP_LEVEL_PARAM);
+                var topLevelId = topLevel.AsElementId();
+
+                // send to DB
+
+                var uid = stair.UniqueId;
+
+
+                var cy = string.Format("MATCH (levelBase:Level{{ElementId:{0} }}) ", baseLevelId) +
+                        string.Format("MATCH (levelTop:Level{{ElementId:{0} }}) ", topLevelId) +
+                         string.Format("MERGE (s:Stair{{ElementId: {0}, Name: \"{1}\" , Width: {2} }}) ", stair.Id.IntegerValue, stair.Name, width.ToString().Replace(",", ".")) +
+                         "MERGE (levelBase)<-[:CONNECTS]-(s) " +
+                         "MERGE (levelTop)<-[:CONNECTS]-(s)";
+                cmdManager.cypherCommands.Add(cy);
             }
 
-            // extract stairs and connecting spaces
+            // extract ramps and connecting spaces
             FilteredElementCollector rampCollector = new FilteredElementCollector(doc);
             ICollection<Element> ramps = rampCollector.WhereElementIsNotElementType().OfCategory(BuiltInCategory.OST_Ramps).ToElements();
             foreach (Element ramp in ramps)
             {
-                Debug.WriteLine(ramp.Id);
+
+                // send to DB
+                var cy = string.Format("MATCH (l:Level{{ElementId:{0} }})", ramp.LevelId.IntegerValue) +
+                 string.Format("MERGE (r:Ramp{{ElementId: {0}, Name: \"{1}\" }})", ramp.Id.IntegerValue, ramp.Name) +
+                 "MERGE (l)-[:CONTAINS]->(r)";
+                cmdManager.cypherCommands.Add(cy);
             }
 
             // write commands to file
@@ -308,7 +332,7 @@ namespace SpaceTracker
                     sql = "DELTE FROM contains WHERE LevelId = " + id;
                     cmdManager.sqlCommands.Add(sql);
                 }
-                
+
 
 
             }

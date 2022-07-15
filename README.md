@@ -1,5 +1,13 @@
 # SpaceTracker
 
+A prototypical implementation to extract feature graphs from Revit models. 
+
+
+![image](https://user-images.githubusercontent.com/56266373/179000357-c2956069-5c02-4376-b5c1-cddf4158ebfa.png)
+
+![image](https://user-images.githubusercontent.com/56266373/179000256-5e9210c6-48bd-46e1-87b4-9304ee2e5939.png)
+
+
 Tracks the changes in a Revit project and saves the general structure of it in a relational SQLite-Database and a graph-based Neo4j-Database to illustrate differences between those two types of DBs.
 
 ## Requirements

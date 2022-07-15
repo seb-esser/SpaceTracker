@@ -17,7 +17,11 @@ def write_neo4j_to_csv():
     res = connector.run_cypher_statement(cy)
     nodes = NodeItem.from_neo4j_response(res)
 
-    edges = []
+    # get relevant edges/paths
+    cy = "MATCH pattern1 =  (r1:Room)<--(w:Wall)<--(d:Door), " \
+         "pattern2 = (r2:Room)<--(w) WHERE r1.ElementId < r2.ElementId RETURN [ID(d), ID(r1)], [ID(d), ID(r2)]"
+    edges = connector.run_cypher_statement(cy)
+    pprint(edges)
 
     AccessibilityExtractor.write_to_csv(nodes, edges)
 

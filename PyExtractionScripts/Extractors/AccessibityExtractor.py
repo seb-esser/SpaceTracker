@@ -11,7 +11,7 @@ class AccessibilityExtractor:
         pass
 
     @staticmethod
-    def write_to_csv(nodes: List[NodeItem], edges: List[EdgeItem]):
+    def write_to_csv(nodes: List[NodeItem], edges):
 
         header = ["Graph ID", "Nodes for Steller Graph", "Space", "Door", "Stairs", "Ramp", "170", "91.5", "81.5",
                   "Corridor or not", "Ramp Slope", "Fake Labels"]
@@ -64,7 +64,28 @@ class AccessibilityExtractor:
             row = [graph_id, node.id, *type_encoded, *width_encoded, is_corridor, slope, label]
             data.append(row)
 
-        with open('MiniSample_TUM_nodes.csv', 'w', encoding='UTF8', newline='') as f:
+        with open('examples/MiniSample_TUM_nodes.csv', 'w', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+
+            # write the header
+            writer.writerow(header)
+
+            # write multiple rows
+            writer.writerows(data)
+
+        unified_edges = []
+        for e in edges:
+            e1 = e[0]
+            e2 = e[1]
+            if e1 not in unified_edges:
+                unified_edges.append(e1)
+            if e2 not in unified_edges:
+                unified_edges.append(e2)
+
+        header = ["source", "target"]
+        data = unified_edges
+
+        with open('examples/MiniSample_TUM_edges.csv', 'w', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
 
             # write the header
